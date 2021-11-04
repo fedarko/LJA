@@ -123,6 +123,8 @@ class Graph:
                             return
                         new_seq = start_e.seq[:-k] + end_e.seq
                         new_label = start_e.label + end_e.label
+#                        print (f'{new_label} {start_e.label} {end_e.label}')
+                      
                         self.AddEdge(start_e.start_vertex, end_e.end_vertex, new_seq, new_label)
                     for eid in to_remove:
                         self.InternalRemoveEdge(eid)
@@ -358,21 +360,27 @@ def get_bulges(graph):
                     l1 -= v_len
                     l2 -= v_len
                     b_file.write(f'{e1.get_external_id()} {e2.get_external_id()} {l1} {l2} \n')
-                    bulges[e1] = e2
-                    bulges[e2] = e1
+                    bulges[e1.get_external_id()] = e2.get_external_id()
+                    bulges[e2.get_external_id()] = e1.get_external_id()
     return bulges
 
 #update only fixable bulges
 def update_fixable_haplotypes(bulges, haplotypes):
+    count = 0
     for h in haplotypes.keys():
         if haplotypes[h] == "0" or haplotypes[h] == "a":
             if h in bulges:
                 if haplotypes[bulges[h]] == "m":
                     haplotypes[h] = "p"
+                    count += 1
                 elif haplotypes[bulges[h]] == "p":
                     haplotypes[h] = "m"
+                    count += 1
+    print (f'Updated {count} fixable bulge haplotypes')
+
 
 def assign_short_haplotypes(bulges, haplotypes, graph):
+    count = 0
     short_length = 10
     for h in haplotypes.keys():
         #should be any difference here?
@@ -383,12 +391,15 @@ def assign_short_haplotypes(bulges, haplotypes, graph):
                     l1 = graph.get_internal_length(2*h)
                     l2 = graph.get_internal_length(2*bulges[h])
                     if l1 < short_length and l2 < short_length:
+                        count += 1
                         if random.randint(0, 1) == 0:
                             haplotypes[h] = "m"
                             haplotypes[bulges[h]] = "p"
                         else:
                             haplotypes[h] = "p"
                             haplotypes[bulges[h]] = "m"
+    print (f'Updated {count} unfixable short bulges')
+
 
 def get_start_end_vertex(edge_component, segments, edges_to_id):
     max_l = 0
