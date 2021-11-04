@@ -306,9 +306,7 @@ def construct_graph(edge_component, segments, links, forbidden):
         edges[id].start_vertex = canonic_ids[edges[id].start_vertex]
         edges[id].end_vertex = canonic_ids[edges[id].end_vertex]
     #        print(edges[id])
-    G = Graph()
-    G.vertices = canonic_vertices
-    g.edges = edges
+    G = Graph(canonic_vertices, edges)
     return G
 
 
@@ -400,9 +398,9 @@ def run_extraction(graph_f, forbidden_f):
         forbidden.add(line.strip())
     print("Constructing graph...")
 
-    [vertices, edges] = construct_graph(segments.keys(), segments, links, forbidden)
-    get_unbranching_paths(vertices, edges)
-    print_bulges(vertices, edges)
+    graph = construct_graph(segments.keys(), segments, links, forbidden)
+    get_unbranching_paths(graph)
+    print_bulges(graph)
     print("Constructed")
 
 
