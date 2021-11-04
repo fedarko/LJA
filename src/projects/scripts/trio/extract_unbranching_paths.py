@@ -98,9 +98,11 @@ class Graph:
     def InternalRemoveEdge (self, eid):
         incident = [self.edges[eid].start_vertex, self.edges[eid].end_vertex]
         for vid in incident:
-            self.vertices[vid].incoming.remove(eid)
-            self.vertices[vid].outgoing.remove(eid)
-        self.edge.remove(eid)
+            if eid in self.vertices[vid].incoming:
+                self.vertices[vid].incoming.remove(eid)
+            if eid in self.vertices[vid].outgoing:
+                self.vertices[vid].outgoing.remove(eid)
+        del self.edges[eid]
 
     def compress_vertex_if_needed(self, vid):
         if vid in self.vertices.keys():
@@ -126,11 +128,11 @@ class Graph:
                         self.InternalRemoveEdge(eid)
 
     def remove_edge_gfa_id(self, gfa_id):
-        to_compress = ()
+        to_compress = set()
         for eid in range(gfa_id * 2, gfa_id * 2 + 2):
             if eid in self.edges.keys():
-                to_compress.insert(self.edges[eid].start_vertex)
-                to_compress.insert(self.edges[eid].end_vertex)
+                to_compress.add(self.edges[eid].start_vertex)
+                to_compress.add(self.edges[eid].end_vertex)
                 # special function, to get used in vertices
                 self.InternalRemoveEdge(eid)
 
@@ -246,16 +248,12 @@ def construct_graph(edge_component, segments, links):
     for e in edge_component:
         if e not in links:
             continue
-        if e in forbidden:
-            continue
         for l in links[e]:
             arr = l.split()
             # L	edge_43116	-	edge_6653	+	0M
 
             edge_start = e
             edge_end = arr[3]
-            if edge_end in forbidden:
-                continue
             first_edge = int(edge_start) * 2
             second_edge = int(edge_end) * 2
             overlap = int(arr[5][:-1])
@@ -450,7 +448,7 @@ def run_extraction(graph_f, haplotypes_f):
     for f in haplotypes.keys():
         #TODO parameter
         if haplotypes[f] == "p":
-            graph.remove_edge_gfa_id(f)
+            graph.remove_edge_gfa_id(int(f))
             removed +=1
     print (f'Removed {removed} paternal edges')
     graph.print_to_fasta("maternal.fasta")
