@@ -444,7 +444,7 @@ def run_extraction(graph_f, haplotypes_f):
     haplotypes = {}
     for line in open(haplotypes_f, 'r'):
         arr = line.split()
-        haplotypes[arr[0]] = arr[1]
+        haplotypes[int(arr[0])] = arr[1]
 
     unique = set()
     total = 0
