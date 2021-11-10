@@ -43,6 +43,8 @@ class Edge:
         self.start_vertex = start_vertex
         self.edge_id = edge_id
         self.end_vertex = end_vertex
+        #temporary for local runs
+        self.seq = ""
         self.seq = seq
         self.label = str(self.get_external_id()) + self.get_orientation()
 
@@ -100,8 +102,7 @@ class Graph:
 
     def AddEdge(self, start_vertex, end_vertex, new_seq, new_label):
         eid = self.edge_next_id
-        self.edges[eid] = Edge(eid, start_vertex, end_vertex,
-                                             new_seq)
+        self.edges[eid] = Edge(eid, start_vertex, end_vertex, new_seq)
         self.edges[eid].label = new_label
         self.vertices[start_vertex].outgoing.append(eid)
         self.vertices[end_vertex].incoming.append(eid)
@@ -390,8 +391,8 @@ def get_bulges(graph):
                     l1 -= v_len
                     l2 -= v_len
                     b_file.write(f'{e1.get_external_id()} {e2.get_external_id()} {l1} {l2} \n')
-                    bulges[e1.get_external_id()] = e2.get_external_id()
-                    bulges[e2.get_external_id()] = e1.get_external_id()
+                    bulges[e1] = e2
+                    bulges[e2] = e1
     return bulges
 
 #update only fixable bulges
@@ -400,19 +401,19 @@ def update_fixable_haplotypes(bulges, haplotypes):
     for h in haplotypes.keys():
         if haplotypes[h] == "0" or haplotypes[h] == "a":
             if h in bulges:
-                if haplotypes[bulges[h]] == "m":
+                if haplotypes[bulges[h].get_external_id()] == "m":
                     haplotypes[h] = "p"
                     count += 1
-                elif haplotypes[bulges[h]] == "p":
+                elif haplotypes[bulges[h].get_external_id()] == "p":
                     haplotypes[h] = "m"
                     count += 1
-    print (f'Updated {count} fixable bulge haplotypes')
 
 
 def assign_short_haplotypes(bulges, haplotypes, graph):
     count = 0
     short_length = 10
     for h in haplotypes.keys():
+
         #should be any difference here?
         if haplotypes[h] == "0" or haplotypes[h] == "a":
             if h in bulges:
@@ -441,6 +442,19 @@ def get_start_end_vertex(edge_component, segments, edges_to_id):
             max_e = e
     print(max_e)
     return [edges_to_id[max_e] * 4 + 1, edges_to_id[max_e] * 4]
+def get_distinctive_counts(seq_a, seq_b):
+    return [0,0]
+def print_table(bulges, haplotypes, graph):
+    for top in bulges.keys():
+        topid = top.get_external_id()
+        bottom = bulges[topid]
+        bulge_dist = get_distinctive_counts(top.seq, bottom.seq)
+        bid = bulges[topid].get_external_id()
+        table_str = (f'{graph.vertices[top.start_vertex].k}\t{graph.vertices[top.end_vertex].k}\t{top.length()}\t{bottom.length()}\t' +
+                     f'{haplotypes[topid].haplotype}\t{haplotypes[bid].haplotype}\t' +
+                     f'{haplotypes[topid].desicive_counts[0]}\t{haplotypes[topid].desicive_counts[1]}\t' +
+                     f'{haplotypes[bid].desicive_counts[0]}\t{haplotypes[bid].desicive_counts[1]}\t' +
+                     f'{bulge_dist[0]}\{bulge_dist[1]}')
 
 
 def run_extraction(graph_f, haplotypes_f):
@@ -473,8 +487,8 @@ def run_extraction(graph_f, haplotypes_f):
             neighbours[arr[1]] = set()
     haplotypes = {}
     for line in open(haplotypes_f, 'r'):
-        arr = line.split()
-        haplotypes[int(arr[0])] = arr[1]
+        haplo = HaplotypeStats(line)
+        haplotypes[haplo.id] = haplo
 
     unique = set()
     total = 0
@@ -482,9 +496,10 @@ def run_extraction(graph_f, haplotypes_f):
 
     graph = construct_graph(segments.keys(), segments, links)
     graph.print_to_dot("tst.dot", {})
-    exit()
 #    get_unbranching_paths(graph)
     bulges = get_bulges(graph)
+    print_table(bulges, haplotypes, graph)
+    exit()
     update_fixable_haplotypes(bulges, haplotypes)
     assign_short_haplotypes(bulges, haplotypes, graph)
     removed = 0
