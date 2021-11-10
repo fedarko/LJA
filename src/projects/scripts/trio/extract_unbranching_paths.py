@@ -79,11 +79,11 @@ class HaplotypeStats:
         #32      m       0       273     28      390     22      24      112906  17
         #s->seq[i].name, type, s->cnt[i].sc[0], s->cnt[i].sc[1],c[0<<2|2], c[2<<2|0], c[0<<2|1], c[1<<2|0], s->cnt[i].nk, c[0])
         arr = triobin_str.split()
-        haplotype  = arr[1]
-        id = int(arr[0])
-        decisive_strips = [int(arr[2]), int(arr[3])]
-        decisive_counts = [int(arr[4]), int(arr[5])]
-        total_kmers = int(arr[8])
+        self.haplotype  = arr[1]
+        self.id = int(arr[0])
+        self.decisive_strips = [int(arr[2]), int(arr[3])]
+        self.decisive_counts = [int(arr[4]), int(arr[5])]
+        self.total_kmers = int(arr[8])
         #TODO: arr 6, 7, 9
 
 
@@ -182,6 +182,7 @@ class Graph:
             dot_graph.add_edge(self.edges[eid].start_vertex, self.edges[eid].end_vertex, label=self.edges[eid].label, color=e_color)
         pos = nx.nx_agraph.graphviz_layout(dot_graph)
         nx.draw(dot_graph, pos=pos)
+#        nx.draw(dot_graph)
         nx.drawing.nx_agraph.write_dot(dot_graph, outfile)
 
 
@@ -444,18 +445,26 @@ def get_start_end_vertex(edge_component, segments, edges_to_id):
     return [edges_to_id[max_e] * 4 + 1, edges_to_id[max_e] * 4]
 def get_distinctive_counts(seq_a, seq_b):
     return [0,0]
+
 def print_table(bulges, haplotypes, graph):
+    used = set()
+    print(f'topid\tbottomid\tstart_v.k\tend_v.k\ttop_class\tbottom_class\ttop_p_count\ttop_m_count\tbottom_p_count\tbottom_m_count\tdistinct_top\tdistinct_bottom\t')
     for top in bulges.keys():
         topid = top.get_external_id()
-        bottom = bulges[topid]
+        if topid in used:
+            continue
+        bottom = bulges[top]
         bulge_dist = get_distinctive_counts(top.seq, bottom.seq)
-        bid = bulges[topid].get_external_id()
-        table_str = (f'{graph.vertices[top.start_vertex].k}\t{graph.vertices[top.end_vertex].k}\t{top.length()}\t{bottom.length()}\t' +
+        bid =bottom.get_external_id()
+        used.add(topid)
+        used.add(bid)
+        table_str = (f'{topid}\t{bid}\t' +
+                     f'{graph.vertices[top.start_vertex].k}\t{graph.vertices[top.end_vertex].k}\t{top.length()}\t{bottom.length()}\t' +
                      f'{haplotypes[topid].haplotype}\t{haplotypes[bid].haplotype}\t' +
-                     f'{haplotypes[topid].desicive_counts[0]}\t{haplotypes[topid].desicive_counts[1]}\t' +
-                     f'{haplotypes[bid].desicive_counts[0]}\t{haplotypes[bid].desicive_counts[1]}\t' +
-                     f'{bulge_dist[0]}\{bulge_dist[1]}')
-
+                     f'{haplotypes[topid].decisive_counts[0]}\t{haplotypes[topid].decisive_counts[1]}\t' +
+                     f'{haplotypes[bid].decisive_counts[0]}\t{haplotypes[bid].decisive_counts[1]}\t' +
+                     f'{bulge_dist[0]}\t{bulge_dist[1]}')
+        print (table_str)
 
 def run_extraction(graph_f, haplotypes_f):
     neighbours = {}
@@ -495,8 +504,7 @@ def run_extraction(graph_f, haplotypes_f):
     print("Constructing graph...")
 
     graph = construct_graph(segments.keys(), segments, links)
-    graph.print_to_dot("tst.dot", {})
-#    get_unbranching_paths(graph)
+#    graph.print_to_dot("tst.dot", {})
     bulges = get_bulges(graph)
     print_table(bulges, haplotypes, graph)
     exit()
