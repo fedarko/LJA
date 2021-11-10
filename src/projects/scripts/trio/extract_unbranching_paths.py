@@ -443,12 +443,44 @@ def get_start_end_vertex(edge_component, segments, edges_to_id):
             max_e = e
     print(max_e)
     return [edges_to_id[max_e] * 4 + 1, edges_to_id[max_e] * 4]
+
+def construct_hashes(seq):
+    k = 31
+    res = set()
+    base = 7
+    mod = 123492373
+    cur_base = 1
+    hash = ord(seq[0])
+    for i in range(1, k):
+        hash = (hash * base + ord(seq[i])) % mod
+        cur_base = (base * cur_base) %mod
+    shift_pow = (base * cur_base) %mod
+    for i in range(k, len(seq)):
+        res.add(hash)
+        hash *= base
+        hash %= mod
+        hash = (hash + mod - ((ord(seq[i - k]) * shift_pow) % mod)) % mod
+        hash = (hash + ord(seq[i])) % mod
+    res.add(hash)
+    return res
+
 def get_distinctive_counts(seq_a, seq_b):
-    return [0,0]
+    set_a = construct_hashes(seq_a)
+    set_b = construct_hashes(seq_b)
+    dist_a = 0
+    dist_b = 0
+    for s in set_a:
+        if not (s in set_b):
+            dist_a +=1
+    for s in set_b:
+        if not (s in set_a):
+            dist_b += 1
+
+    return [dist_a, dist_b]
 
 def print_table(bulges, haplotypes, graph):
     used = set()
-    print(f'topid\tbottomid\tstart_v.k\tend_v.k\ttop_class\tbottom_class\ttop_p_count\ttop_m_count\tbottom_p_count\tbottom_m_count\tdistinct_top\tdistinct_bottom\t')
+    print(f'topid\tbottomid\tstart_v.k\tend_v.k\ttop_len\tbottom_len\ttop_class\tbottom_class\ttop_p_strip\ttop_m_strip\tbottom_p_strip\tbottom_m_strip\ttop_p_count\ttop_m_count\tbottom_p_count\tbottom_m_count\tdistinct_top\tdistinct_bottom\t')
     for top in bulges.keys():
         topid = top.get_external_id()
         if topid in used:
@@ -459,8 +491,10 @@ def print_table(bulges, haplotypes, graph):
         used.add(topid)
         used.add(bid)
         table_str = (f'{topid}\t{bid}\t' +
-                     f'{graph.vertices[top.start_vertex].k}\t{graph.vertices[top.end_vertex].k}\t{top.length()}\t{bottom.length()}\t' +
+                     f'{graph.vertices[top.start_vertex].k}\t{graph.vertices[top.end_vertex].k}\t{top.length() -graph.vertices[top.start_vertex].k - graph.vertices[top.end_vertex].k }\t{bottom.length()  -graph.vertices[top.start_vertex].k - graph.vertices[top.end_vertex].k}\t' +
                      f'{haplotypes[topid].haplotype}\t{haplotypes[bid].haplotype}\t' +
+                     f'{haplotypes[topid].decisive_strips[0]}\t{haplotypes[topid].decisive_strips[1]}\t' +
+                     f'{haplotypes[bid].decisive_strips[0]}\t{haplotypes[bid].decisive_strips[1]}\t' +
                      f'{haplotypes[topid].decisive_counts[0]}\t{haplotypes[topid].decisive_counts[1]}\t' +
                      f'{haplotypes[bid].decisive_counts[0]}\t{haplotypes[bid].decisive_counts[1]}\t' +
                      f'{bulge_dist[0]}\t{bulge_dist[1]}')
