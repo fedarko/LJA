@@ -1,11 +1,11 @@
 project(debruijn)
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(lja lja.cpp subdataset_processing.cpp gap_closing.cpp uncompressed_output.cpp)
-add_library(lja_mmg lja.cpp subdataset_processing.cpp gap_closing.cpp uncompressed_output.cpp)
+add_executable(lja lja.cpp)
+add_library(lja_mmg pipeline.cpp subdataset_processing.cpp gap_closing.cpp uncompressed_output.cpp)
 
-target_link_libraries(lja lja_ec lja_dbg lja_homopolish lja_common lja_sequence m)
 target_link_libraries(lja_mmg lja_ec lja_dbg lja_homopolish lja_common lja_sequence m)
+target_link_libraries(lja lja_mmg)
 
 add_executable(jumboDBG dbg.cpp subdataset_processing.cpp)
 target_link_libraries(jumboDBG lja_ec lja_dbg lja_common lja_sequence m)
