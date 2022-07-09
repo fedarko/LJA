@@ -48,7 +48,8 @@ int main(int argc, char **argv) {
     }
     hashing::RollingHash hasher(k, std::stoi(parser.getValue("base")));
     size_t threads = std::stoi(parser.getValue("threads"));
-    size_t hicov = std::stoi(parser.getValue("hicov"));
+    std::string hicovStr = parser.getValue("hicov");
+    size_t hicov = std::stoi(hicovStr);
     // (Finished parsing command-line arguments.)
 
     dbg::SparseDBG dbg = DBGPipeline(logger, hasher, w, reads_lib, dir, threads, "none", "none");
@@ -69,10 +70,14 @@ int main(int argc, char **argv) {
     subdatasets = oneline::initialize<Subdataset>(components); // Create subdatasets corresponding to components
     FillSubdatasets(subdatasets, {&readStorage}, true); // Assign reads to datasets
 
+    std::string hci = "high-coverage (>= " + hicovStr + "x) edges.";
+
     // New work: identify "high-coverage" edges, and remove the reads covering
     // these edges. Save the removed reads to a separate file for later use.
+    logger.info() << "Starting the identification of " << hci << std::endl;
     std::ofstream badreados;
     badreados.open(dir / "hicov-edge-reads.fasta");
+    size_t numBadReads = 0;
     for (AlignedRead &read : readStorage) {
         dbg::CompactPath &cPath = read.path;
         dbg::GraphAlignment aln = cPath.getAlignment();
@@ -84,6 +89,7 @@ int main(int argc, char **argv) {
                 // Mark the read for removal: this doesn't actually remove it
                 // yet -- we'll do that when we call applyCorrections() later
                 read.invalidate();
+                numBadReads++;
                 // Now that we know that this read covers a high-coverage edge,
                 // we know that this read is "bad" and can be removed. So we're
                 // done here.
@@ -92,14 +98,17 @@ int main(int argc, char **argv) {
         }
     }
     badreados.close();
+    logger.info() << "Identified " << numBadReads << " reads spanning " << hci << std::endl;
 
     // Actually remove the invalidated reads
     readStorage.applyCorrections(logger, threads);
 
+    logger.info() << "Modifying the graph to remove now-uncovered edges." << std::endl;
     // Now that we've removed certain reads, we will modify the graph
     // accordingly: remove all edges that are now uncovered
     std::vector<RecordStorage *> storages = {&readStorage};
     RemoveUncovered(logger, threads, dbg, storages);
+    logger.info() << "Done modifying the graph." << std::endl;
 
     // From here, write out the subdatasets (components) like normal
     size_t cnt = 0;
