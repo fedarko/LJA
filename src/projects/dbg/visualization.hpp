@@ -129,7 +129,8 @@ public:
 inline void printEdge(std::ostream &os, dbg::Edge &edge, const std::string &extra_label = "",
                const std::string &color = "black") {
     dbg:: Vertex &end = *edge.end();
-    os << "\"" << edge.start()->getShortId() << "\" -> \"" << end.getShortId() <<
+    // Nodes are now denoted in the DOT file by their full (not short) IDs
+    os << "\"" << edge.start()->getId() << "\" -> \"" << end.getId() <<
        "\" [label=\"" << "ACGT"[edge.seq[0]] << " " << edge.size() << "(" << edge.getCoverage() << ")\"";
     if(!extra_label.empty()) {
         os << " labeltooltip=\"" << extra_label << "\"";
@@ -162,7 +163,11 @@ inline void printDot(std::ostream &os, const dbg::Component &component, const st
         for(dbg::Vertex * vit : component.graph().getVertices(vid)) {
             dbg::Vertex &vert = *vit;
             std::string color = component.covers(vert) ? "white" : "yellow";
-            os << vert.getShortId() << " [style=filled fillcolor=\"" + color + "\"]\n";
+            // Since short node IDs can collide with each other, use full node
+            // IDs. Since these long IDs can make the visualization gross, we
+            // assign nodes *labels* based on their short IDs -- but since the
+            // underlying IDs are the long ones this should prevent collisions.
+            os << vert.getId() << " [style=filled fillcolor=\"" + color + "\" label=\"" + vert.getShortId() + "\"]\n";
         }
     }
     for(dbg::Edge &edge : component.edges()) {
