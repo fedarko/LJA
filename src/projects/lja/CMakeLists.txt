@@ -6,6 +6,9 @@ target_link_libraries(lja lja_ec lja_dbg lja_homopolish lja_common lja_sequence 
 add_executable(jumboDBG dbg.cpp)
 target_link_libraries(jumboDBG lja_ec lja_dbg lja_common lja_sequence m)
 
+add_executable(multiplexDBG mdbg.cpp)
+target_link_libraries(multiplexDBG lja_ec lja_dbg lja_homopolish lja_common lja_sequence m repeat_resolution lja_trio yak nano_alignment)
+
 install(PROGRAMS "${PYTHON_DIR}/run_rr.py"
         DESTINATION bin
         COMPONENT runtime)
