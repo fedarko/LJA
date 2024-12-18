@@ -81,11 +81,11 @@ std::string constructMessage() {
     ss << "Usage: multiplexDBG [options] -o <output-dir> -i <mowerdbg-dir> -k <int>\n\n";
     ss << "Options:\n";
     ss << "  -o <file_name> (or --output-dir <file_name>)  Name of output folder. multiplexDBG outputs will be stored here.\n";
-    ss << "  -i <file_name> (or --input-dir <file_name>)   Path to input folder containing mowerDBG outputs (i.e. 01_TopologyBasedCorrection).\n";
+    ss << "  -i <file_name> (or --input-dir <file_name>)   Path to input folder containing mowerDBG outputs (i.e. .../01_TopologyBasedCorrection).\n";
     ss << "  -k <int>                                      Big k-mer size that was used in the final mowerDBG step (probably 5001).\n";
-    ss << "  --max-k <int>                                 Max k. Default 40000.\n";
-    ss << "  --unique-threshold <int>                      (From Marcus: I don't actually know what this is.) Default 40000.\n";
-    ss << "  --diploid                                     Indicates whether the genome is diploid. We just pass this directly to multiplexDBG.\n";
+    ss << "  --max-k <int>                                 Default 40000.\n";
+    ss << "  --unique-threshold <int>                      Default 40000.\n";
+    ss << "  --diploid                                     Diploidy flag.\n";
     ss << "  -h (or --help)                                Print this help message.\n";
     ss << "  -t <int> (or --threads <int>)                 Number of threads. The default value is 16.\n";
     return ss.str();
