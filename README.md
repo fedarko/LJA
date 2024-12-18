@@ -22,6 +22,25 @@ For LJA installation and running instructions please refer to [LJA manual](docs/
 We also provide jumboDBG module for de Bruijn graph construction as a separate script.
 For jumboDBG running instructions please refer to [jumboDBG manual](docs/jumbodbg_manual.md).
 
+**For running multiplexDBG by itself,** just run the usual LJA installation process (cmake / make).
+You should then see a `multiplexDBG` binary in the `bin/` directory:
+
+```console
+multiplexDBG
+Usage: multiplexDBG [options] -o <output-dir> -g <graph> -a <aln> -k <int>
+
+Options:
+  -o <file_name> (or --output-dir <file_name>)  Name of output folder. multiplexDBG outputs will be stored here.
+  -g <file_name> (or --graph <file_name>)       mowerDBG output GFA graph (i.e. .../01_TopologyBasedCorrection/final_dbg.gfa).
+  -a <file_name> (or --aln <file_name>)         mowerDBG output alignment (i.e. .../01_TopologyBasedCorrection/final_dbg.aln).
+  -k <int>                                      Big k-mer size that was used in the final mowerDBG step (probably 5001).
+  --max-k <int>                                 Default 40000.
+  --unique-threshold <int>                      Default 40000.
+  --diploid                                     Diploidy flag.
+  -h (or --help)                                Print this help message.
+  -t <int> (or --threads <int>)                 Number of threads. The default value is 16.
+```
+
 License
 -------
 

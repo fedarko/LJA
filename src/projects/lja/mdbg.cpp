@@ -45,32 +45,35 @@ std::unordered_map<std::string, std::experimental::filesystem::path> MDBGConstru
         k += 1;
     }
     hashing::RollingHash hasher(k);
-    logger.info() << "Starting LoadDBGFromEdgeSequences" << std::endl;
+    logger.debug() << "Starting LoadDBGFromEdgeSequences" << std::endl;
     SparseDBG dbg = dbg::LoadDBGFromEdgeSequences(logger, threads, {graph_gfa}, hasher);
-    logger.info() << "Done" << std::endl;
+    logger.debug() << "Done" << std::endl;
 
-    logger.info() << "Initializing index" << std::endl;
+    logger.debug() << "Initializing index" << std::endl;
     IdIndex<Vertex> index(dbg.vertices().begin(), dbg.vertices().end());
-    logger.info() << "Done" << std::endl;
+    logger.debug() << "Done" << std::endl;
 
     size_t extension_size = 10000000;
-    logger.info() << "Initializing readStorage" << std::endl;
+    logger.debug() << "Initializing readStorage" << std::endl;
     dbg::ReadAlignmentStorage readStorage(dbg, 0, extension_size, true, debug);
-    logger.info() << "Done" << std::endl;
-    logger.info() << "Initializing extra_reads" << std::endl;
+    logger.debug() << "Done" << std::endl;
+    logger.debug() << "Initializing extra_reads" << std::endl;
     dbg::ReadAlignmentStorage extra_reads(dbg, 0, extension_size, false, debug);
-    logger.info() << "Done" << std::endl;
-    logger.info() << "loading all reads" << std::endl;
+    logger.debug() << "Done" << std::endl;
+    logger.debug() << "loading all reads" << std::endl;
     ag::LoadAllReads<DBGTraits>(read_paths, {&readStorage, &extra_reads}, index);
-    logger.info() << "Done" << std::endl;
+    logger.debug() << "Done" << std::endl;
     for(Vertex &v : dbg.verticesUnique()) {
         if(v.inDeg() == 1 && v.outDeg() == 1) {
             VERIFY(v.back() == v.rc().back().rc() || (v.back() == v.back().rc() && v.rc().back() == v.rc().back().rc()));
         }
     }
+    logger.debug() << "Initializing RepeatResolver" << std::endl;
     repeat_resolution::RepeatResolver rr(dbg, &readStorage, {&extra_reads},
                                          k, kmdbg, dir, unique_threshold,
                                          diploid, debug, logger);
+    logger.debug() << "Done" << std::endl;
+    logger.debug() << "Running ResolveRepeats()" << std::endl;
     return rr.ResolveRepeats(logger, threads);
 }
 
@@ -78,10 +81,11 @@ std::unordered_map<std::string, std::experimental::filesystem::path> MDBGConstru
 std::string constructMessage() {
     std::stringstream ss;
     ss << "multiplexDBG\n";
-    ss << "Usage: multiplexDBG [options] -o <output-dir> -i <mowerdbg-dir> -k <int>\n\n";
+    ss << "Usage: multiplexDBG [options] -o <output-dir> -g <graph> -a <aln> -k <int>\n\n";
     ss << "Options:\n";
     ss << "  -o <file_name> (or --output-dir <file_name>)  Name of output folder. multiplexDBG outputs will be stored here.\n";
-    ss << "  -i <file_name> (or --input-dir <file_name>)   Path to input folder containing mowerDBG outputs (i.e. .../01_TopologyBasedCorrection).\n";
+    ss << "  -g <file_name> (or --graph <file_name>)       mowerDBG output GFA graph (i.e. .../01_TopologyBasedCorrection/final_dbg.gfa).\n";
+    ss << "  -a <file_name> (or --aln <file_name>)         mowerDBG output alignment (i.e. .../01_TopologyBasedCorrection/final_dbg.aln).\n";
     ss << "  -k <int>                                      Big k-mer size that was used in the final mowerDBG step (probably 5001).\n";
     ss << "  --max-k <int>                                 Default 40000.\n";
     ss << "  --unique-threshold <int>                      Default 40000.\n";
@@ -92,14 +96,14 @@ std::string constructMessage() {
 }
 
 int main(int argc, char **argv) {
-    AlgorithmParameters parameters({"vertices=none", "unique=none", "coverages=none", "dbg=none", "output-dir=", "input-dir=",
+    AlgorithmParameters parameters({"vertices=none", "unique=none", "coverages=none", "dbg=none", "output-dir=", "graph=", "aln=",
                                     "max-k=40000", "unique-threshold=40000",
                                    "threads=16", "k-mer-size=", "base=239", "debug", "disjointigs=none", "reference=none",
                                    "simplify", "coverage", "cov-threshold=2", "rel-threshold=10", "tip-correct",
                                    "initial-correct", "mult-correct", "mult-analyse", "compress", "dimer-compress=1000000000,1000000000,1", "help", "genome-path",
                                    "dump", "extension-size=none", "print-all", "extract-subdatasets", "print-alignments", "subdataset-radius=10000",
     "split", "diploid"}, {"reads", "pseudo-reads", "align", "paths", "print-segment"}, constructMessage());
-    CLParser parser(parameters, {"h=help", "o=output-dir", "t=threads", "k=k-mer-size","i=input-dir"});
+    CLParser parser(parameters, {"h=help", "o=output-dir", "t=threads", "k=k-mer-size","g=graph", "a=aln"});
     AlgorithmParameterValues params = parser.parseCL(argc, argv);
     if (params.getCheck("help")) {
         std::cout << params.helpMessage() << std::endl;
@@ -117,7 +121,8 @@ int main(int argc, char **argv) {
     StringContig::homopolymer_compressing = params.getCheck("compress");
     StringContig::SetDimerParameters(params.getValue("dimer-compress"));
     const std::experimental::filesystem::path dir(params.getValue("output-dir"));
-    const std::experimental::filesystem::path indir(params.getValue("input-dir"));
+    const std::experimental::filesystem::path graph(params.getValue("graph"));
+    const std::experimental::filesystem::path aln(params.getValue("aln"));
     ensure_dir_existance(dir);
     logging::LoggerStorage ls(dir, "dbg");
     logging::Logger logger;
@@ -137,11 +142,8 @@ int main(int argc, char **argv) {
     size_t threads = std::stoi(params.getValue("threads"));
     omp_set_num_threads(threads);
 
-    MDBGConstruction(
-        logger, threads, k, max_k, unique_threshold, diploid,
-        dir, indir / "final_dbg.gfa", indir / "final_dbg.aln", debug
-    );
+    MDBGConstruction(logger, threads, k, max_k, unique_threshold, diploid, dir, graph, aln, debug);
 
-    logger.info() << "multiplexDBG finished." << std::endl;
+    logger.info() << "Done. multiplexDBG finished." << std::endl;
     return 0;
 }
