@@ -25,7 +25,7 @@ For jumboDBG running instructions please refer to [jumboDBG manual](docs/jumbodb
 **For running multiplexDBG by itself,** just run the usual LJA installation process (cmake / make).
 You should then see a `multiplexDBG` binary in the `bin/` directory:
 
-```console
+```
 multiplexDBG
 Usage: multiplexDBG [options] -o <output-dir> -g <graph> -a <aln> -k <int>
 
